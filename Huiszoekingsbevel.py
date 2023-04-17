@@ -12,18 +12,21 @@ WIE = "a"
 WAAR = "b"
 WANNEER = "c"
 MAX = 5
-pogingen = 0
+
+global pogingen
+pogingen =0
 
 weiger_message = "Uw aanvraag voor een huiszoeking is geweigerd. Controleer of alle gegevens juist gespeld zijn."
 bevel = "Om aanvraag voor een huiszoeking is goedgekeurd. Uw huiszoekingsbevel wordt geprint."
 error_message = "Het maximum aantal aanvragen voor huiszoeking is overschreden, probeer over 10 minuten nog eens."
 
 def controleer(wie, waar, wanneer):
-    if pogingen <= MAX:
+    global pogingen
+    if pogingen < MAX:
         verzend_button.enable()
     else:
         app.error(title="Maximum aantal aanvragen overschreden", text=error_message)
-        time.sleep(600)  # 600 seconden (=10min) wachten
+        time.sleep(600)  # 600 seconden (=10min) wachten (vevangen door iets anders, want nu freezed hij gewoon)
         verzend_button.enable()
     if wie==WIE and waar==WAAR and wanneer==WANNEER:
         print_bevel()
@@ -41,6 +44,7 @@ def error():
     return
 
 def verzend():
+    global pogingen
     print("Aanvraag huiszoeking is verstuurd.")
     verzend_button.disable()
     pogingen += 1
@@ -53,6 +57,7 @@ def verzend():
 
 
 if __name__ == '__main__':
+
 
     app = App(title="Huiszoekingsbevel", height=320, width=480, layout="grid")  # creates schermvakje van de grootte van het TFT shield
     
