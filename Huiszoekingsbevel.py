@@ -3,10 +3,22 @@ TODO
 1. printer connecteren, file maken en toevoegen
 2. WIE, WAAR en WANNEER kiezen
 3. Delay of max aantal pogingen?
+4. MQTT stuff nakijken en eventueel fiksen
 """
 
 from guizero import *
 import time
+import random
+from paho.mqtt import client as mqtt_client
+
+# MQTT stuff
+broker = 'broker.emqx.io'  #mosquitto broker?
+port = 1883  #nakijken
+topic = "esp_tetris/output"
+# generate client ID with pub prefix randomly
+client_id = f'python-mqtt-{random.randint(0, 100)}'  # aanpassen
+username = 'emqx'  # aanpassen
+password = 'public'  # aanpassen
 
 WIE = "a"
 WAAR = "b"
@@ -19,6 +31,28 @@ pogingen =0
 weiger_message = "Uw aanvraag voor een huiszoeking is geweigerd. Controleer of alle gegevens juist gespeld zijn."
 bevel = "Om aanvraag voor een huiszoeking is goedgekeurd. Uw huiszoekingsbevel wordt geprint."
 error_message = "Het maximum aantal aanvragen voor huiszoeking is overschreden, probeer over 10 minuten nog eens."
+
+def connect_mqtt() -> mqtt_client:
+    def on_connect(client, userdata, flags, rc):
+        if rc == 0:
+            print("Connected to MQTT Broker!")
+        else:
+            print("Failed to connect, return code %d\n", rc)
+
+    client = mqtt_client.Client(client_id)
+    client.username_pw_set(username, password)
+    client.on_connect = on_connect
+    client.connect(broker, port)
+    return client
+
+
+def subscribe(client: mqtt_client):
+    def on_message(client, userdata, msg):
+        print(f"Received `{msg.payload.decode()}` from `{msg.topic}` topic")
+
+    client.subscribe(topic)
+    client.on_message = on_message
+
 
 def controleer(wie, waar, wanneer):
     global pogingen
@@ -68,5 +102,11 @@ if __name__ == '__main__':
     date_label = Text(app, text="Datum van de misdaad: ", grid=[0,2], font="Cambria")
     date = TextBox(app, grid=[1,2], text="dd/mm/jjjj", width="fill")
     verzend_button = PushButton(app, text="Verzend", command=verzend, grid=[1,3], width="fill")
+
+
+    client = connect_mqtt()
+    subscribe(client)
+    client.loop_forever()  # nakijken
+    # kijken of gewoon ergens "msg.payload.decode()" schrijven ook werkt
     
     app.display()
