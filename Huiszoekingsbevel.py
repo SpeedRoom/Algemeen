@@ -12,13 +12,16 @@ import random
 from paho.mqtt import client as mqtt_client
 
 # MQTT stuff
-broker = 'broker.emqx.io'  #mosquitto broker?
-port = 1883  #nakijken
-topic = "esp_tetris/output"
-# generate client ID with pub prefix randomly
-client_id = f'python-mqtt-{random.randint(0, 100)}'  # aanpassen
-username = 'emqx'  # aanpassen
-password = 'public'  # aanpassen
+broker = '192.168.0.190'  #IP-adres rpi
+port = 1883  
+topic_tetris = "esp_tetris/output"
+topic_doolhof = "esp_doolhof/output"
+client_id = "rp" 
+username = 'sienp' 
+password = 'sienp'  
+
+message_tetris = ""
+message_doolhof = ""
 
 WIE = "a"
 WAAR = "b"
@@ -49,8 +52,12 @@ def connect_mqtt() -> mqtt_client:
 def subscribe(client: mqtt_client):
     def on_message(client, userdata, msg):
         print(f"Received `{msg.payload.decode()}` from `{msg.topic}` topic")
+        if msg.topic == "esp_doolhof/output":
+            message_doolhof = msg.payload.decode()
+        if msg.topic == "esp_tetris/output":
+            message_tetris = msg.payload.decode()
 
-    client.subscribe(topic)
+    client.subscribe(topic_tetris, topic_doolhof)
     client.on_message = on_message
 
 
@@ -70,7 +77,7 @@ def controleer(wie, waar, wanneer):
         error()
     return
 
-def print_bevel():
+def print_bevel():  # Hier commando geven aan printer om te printen + "deur" open
     return
 
 def error():
@@ -96,17 +103,25 @@ if __name__ == '__main__':
     app = App(title="Huiszoekingsbevel", height=320, width=480, layout="grid")  # creates schermvakje van de grootte van het TFT shield
     
     name_label = Text(app, text="Naam van de verdachte: ", grid=[0,0],  font="Cambria")
-    name = TextBox(app, grid=[1,0], text="Voornaam Naam", width="fill")
+    name = TextBox(app, grid=[1,0], text="Voornaam Naam", width="fill", enabled=False)
     address_label = Text(app, text="Adres van de misdaad: ", grid=[0,1], font="Cambria")
     address = TextBox(app, grid=[1,1], text="Gebroeders Desmetstraat 1, 9000 Gent", width="fill")
     date_label = Text(app, text="Datum van de misdaad: ", grid=[0,2], font="Cambria")
-    date = TextBox(app, grid=[1,2], text="dd/mm/jjjj", width="fill")
+    date = TextBox(app, grid=[1,2], text="dd/mm/jjjj", width="fill", enabled=False)
     verzend_button = PushButton(app, text="Verzend", command=verzend, grid=[1,3], width="fill")
 
 
     client = connect_mqtt()
     subscribe(client)
-    client.loop_forever()  # nakijken
-    # kijken of gewoon ergens "msg.payload.decode()" schrijven ook werkt
+    client.loop_start()  
     
+    #controle van de ontvangen berichten
+    if message_doolhof == WANNEER:
+        date = TextBox(app, grid=[1,2], text=message_doolhof, width="fill", enabled=False)
+        
+    if message_tetris == "voltooid":
+        name = TextBox(app, grid=[1,0], text="Voornaam Naam", width="fill", enabled=True)
+    else:
+        name = TextBox(app, grid=[1,0], text="Voornaam Naam", width="fill", enabled=False)
+
     app.display()
