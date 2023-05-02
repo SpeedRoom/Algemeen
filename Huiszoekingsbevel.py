@@ -9,10 +9,11 @@ TODO
 from guizero import *
 import time
 import random
+import os
 from paho.mqtt import client as mqtt_client
 
 # MQTT stuff
-broker = '192.168.0.190'  #IP-adres rpi
+broker = '127.0.0.1'  # IP-adres rpi
 port = 1883  
 topic_tetris = "esp_tetris/output"
 topic_doolhof = "esp_doolhof/output"
@@ -28,12 +29,12 @@ WAAR = "b"
 WANNEER = "c"
 MAX = 5
 
-global pogingen
-pogingen =0
+pogingen = 0
 
 weiger_message = "Uw aanvraag voor een huiszoeking is geweigerd. Controleer of alle gegevens juist gespeld zijn."
 bevel = "Om aanvraag voor een huiszoeking is goedgekeurd. Uw huiszoekingsbevel wordt geprint."
 error_message = "Het maximum aantal aanvragen voor huiszoeking is overschreden, probeer over 10 minuten nog eens."
+
 
 def connect_mqtt() -> mqtt_client:
     def on_connect(client, userdata, flags, rc):
@@ -51,13 +52,17 @@ def connect_mqtt() -> mqtt_client:
 
 def subscribe(client: mqtt_client):
     def on_message(client, userdata, msg):
-        print(f"Received `{msg.payload.decode()}` from `{msg.topic}` topic")
+        global message_doolhof
+        global message_tetris
+        print(f"Received `{msg.payload.decode('utf-8')}` from `{msg.topic}` topic")
         if msg.topic == "esp_doolhof/output":
-            message_doolhof = msg.payload.decode()
+            message_doolhof = msg.payload.decode('utf-8').strip()
         if msg.topic == "esp_tetris/output":
-            message_tetris = msg.payload.decode()
+            message_tetris = msg.payload.decode('utf-8').strip()
+            message_tetris = "voltooid"
+            print(message_tetris)
 
-    client.subscribe(topic_tetris, topic_doolhof)
+    client.subscribe([(topic_doolhof, 0), (topic_tetris, 0)])
     client.on_message = on_message
 
 
@@ -69,7 +74,7 @@ def controleer(wie, waar, wanneer):
         app.error(title="Maximum aantal aanvragen overschreden", text=error_message)
         time.sleep(600)  # 600 seconden (=10min) wachten (vevangen door iets anders, want nu freezed hij gewoon)
         verzend_button.enable()
-    if wie==WIE and waar==WAAR and wanneer==WANNEER:
+    if wie == WIE and waar == WAAR and wanneer == WANNEER:
         print_bevel()
         app.info(title="Huiszoeking goedgekeurd", text=bevel)
         return
@@ -77,12 +82,16 @@ def controleer(wie, waar, wanneer):
         error()
     return
 
+
 def print_bevel():  # Hier commando geven aan printer om te printen + "deur" open
+    os.system("lpr -P printer_name file_name.txt")  #printer name en file_name nog aanpassen, file bij in projectmap zetten
     return
+
 
 def error():
     app.info(title="Huiszoeking geweigerd", text=weiger_message)
     return
+
 
 def verzend():
     global pogingen
@@ -99,29 +108,31 @@ def verzend():
 
 if __name__ == '__main__':
 
-
     app = App(title="Huiszoekingsbevel", height=320, width=480, layout="grid")  # creates schermvakje van de grootte van het TFT shield
-    
-    name_label = Text(app, text="Naam van de verdachte: ", grid=[0,0],  font="Cambria")
-    name = TextBox(app, grid=[1,0], text="Voornaam Naam", width="fill", enabled=False)
-    address_label = Text(app, text="Adres van de misdaad: ", grid=[0,1], font="Cambria")
-    address = TextBox(app, grid=[1,1], text="Gebroeders Desmetstraat 1, 9000 Gent", width="fill")
-    date_label = Text(app, text="Datum van de misdaad: ", grid=[0,2], font="Cambria")
-    date = TextBox(app, grid=[1,2], text="dd/mm/jjjj", width="fill", enabled=False)
-    verzend_button = PushButton(app, text="Verzend", command=verzend, grid=[1,3], width="fill")
-
 
     client = connect_mqtt()
-    subscribe(client)
-    client.loop_start()  
-    
-    #controle van de ontvangen berichten
-    if message_doolhof == WANNEER:
-        date = TextBox(app, grid=[1,2], text=message_doolhof, width="fill", enabled=False)
-        
-    if message_tetris == "voltooid":
-        name = TextBox(app, grid=[1,0], text="Voornaam Naam", width="fill", enabled=True)
-    else:
-        name = TextBox(app, grid=[1,0], text="Voornaam Naam", width="fill", enabled=False)
+    # subscribe(client)
+    # client.loop_start()
 
-    app.display()
+    t_end = time.time() + 30
+    while time.time() < t_end:
+        subscribe(client)
+        client.loop_start()
+        name_label = Text(app, text="Naam van de verdachte: ", grid=[0, 0],  font="Cambria")
+        name = TextBox(app, grid=[1, 0], text="Voornaam Naam", width="fill", enabled=False)
+        address_label = Text(app, text="Adres van de misdaad: ", grid=[0, 1], font="Cambria")
+        address = TextBox(app, grid=[1, 1], text="Gebroeders Desmetstraat 1, 9000 Gent", width="fill")
+        date_label = Text(app, text="Datum van de misdaad: ", grid=[0, 2], font="Cambria")
+        date = TextBox(app, grid=[1, 2], text="dd/mm/jjjj", width="fill", enabled=False)
+        verzend_button = PushButton(app, text="Verzend", command=verzend, grid=[1, 3])
+        print("loop")
+        # controle van de ontvangen berichten DEES WERKT NOG NI
+        if message_doolhof == WANNEER:
+            date = TextBox(app, grid=[1, 2], text=message_doolhof, width="fill", enabled=False)
+            print(message_doolhof)
+
+        if message_tetris == 'voltooid':
+            name = TextBox(app, grid=[1, 0], text="Voornaam Naam", width="fill", enabled=True)
+            print(message_tetris)
+
+        app.display()
