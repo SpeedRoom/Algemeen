@@ -105,34 +105,31 @@ def verzend():
     print(wie, waar, wanneer)
     return wie, waar, wanneer
 
+def controleer_berichten():
+    if message_doolhof == WANNEER:
+        date = TextBox(app, grid=[1, 2], text=message_doolhof, width="fill", enabled=False)
+        print(message_doolhof)
+
+    if message_tetris == 'voltooid':
+        name = TextBox(app, grid=[1, 0], text="Voornaam Naam", width="fill", enabled=True)
+        print(message_tetris)
+
 
 if __name__ == '__main__':
 
     app = App(title="Huiszoekingsbevel", height=320, width=480, layout="grid")  # creates schermvakje van de grootte van het TFT shield
+    name_label = Text(app, text="Naam van de verdachte: ", grid=[0, 0],  font="Cambria")
+    name = TextBox(app, grid=[1, 0], text="Voornaam Naam", width="fill", enabled=False)
+    address_label = Text(app, text="Adres van de misdaad: ", grid=[0, 1], font="Cambria")
+    address = TextBox(app, grid=[1, 1], text="Gebroeders Desmetstraat 1, 9000 Gent", width="fill")
+    date_label = Text(app, text="Datum van de misdaad: ", grid=[0, 2], font="Cambria")
+    date = TextBox(app, grid=[1, 2], text="dd/mm/jjjj", width="fill", enabled=False)
+    verzend_button = PushButton(app, text="Verzend", command=verzend, grid=[1, 3])
 
     client = connect_mqtt()
-    # subscribe(client)
-    # client.loop_start()
+    subscribe(client)
+    client.loop_start()
 
-    t_end = time.time() + 30
-    while time.time() < t_end:
-        subscribe(client)
-        client.loop_start()
-        name_label = Text(app, text="Naam van de verdachte: ", grid=[0, 0],  font="Cambria")
-        name = TextBox(app, grid=[1, 0], text="Voornaam Naam", width="fill", enabled=False)
-        address_label = Text(app, text="Adres van de misdaad: ", grid=[0, 1], font="Cambria")
-        address = TextBox(app, grid=[1, 1], text="Gebroeders Desmetstraat 1, 9000 Gent", width="fill")
-        date_label = Text(app, text="Datum van de misdaad: ", grid=[0, 2], font="Cambria")
-        date = TextBox(app, grid=[1, 2], text="dd/mm/jjjj", width="fill", enabled=False)
-        verzend_button = PushButton(app, text="Verzend", command=verzend, grid=[1, 3])
-        print("loop")
-        # controle van de ontvangen berichten DEES WERKT NOG NI
-        if message_doolhof == WANNEER:
-            date = TextBox(app, grid=[1, 2], text=message_doolhof, width="fill", enabled=False)
-            print(message_doolhof)
+    app.repeat(200, controleer_berichten)
 
-        if message_tetris == 'voltooid':
-            name = TextBox(app, grid=[1, 0], text="Voornaam Naam", width="fill", enabled=True)
-            print(message_tetris)
-
-        app.display()
+    app.display()
