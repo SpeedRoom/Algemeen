@@ -17,6 +17,7 @@ broker = '127.0.0.1'  # IP-adres rpi
 port = 1883  
 topic_tetris = "esp_tetris/output"
 topic_doolhof = "esp_doolhof/output"
+topic_gsm = "esp_gsm/input"
 client_id = "rp" 
 username = 'sienp' 
 password = 'sienp'  
@@ -48,6 +49,16 @@ def connect_mqtt() -> mqtt_client:
     client.on_connect = on_connect
     client.connect(broker, port)
     return client
+
+
+def publish(client, topic, msg):
+    result = client.publish(topic, msg)
+    status = result[0]
+    if status == 0:
+        print(f"Send `{msg}` to topic `{topic}`")
+    else:
+        print(f"Failed to send message to topic {topic}")
+
 
 
 def subscribe(client: mqtt_client):
@@ -83,8 +94,9 @@ def controleer(wie, waar, wanneer):
     return
 
 
-def print_bevel():  # Hier commando geven aan printer om te printen + "deur" open
+def print_bevel():  # Hier commando geven aan printer om te printen + mqtt bevel om gsm's aan te steken : "open"
     os.system("lpr -P printer_name file_name.txt")  #printer name en file_name nog aanpassen, file bij in projectmap zetten
+    publish(client, topic_gsm, "open")
     return
 
 
