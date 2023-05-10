@@ -13,7 +13,7 @@ import os
 from paho.mqtt import client as mqtt_client
 
 # MQTT stuff
-broker = '127.0.0.1'  # IP-adres rpi
+broker = '192.168.1.61'  # IP-adres rpi
 port = 1883  
 topic_tetris = "esp_tetris/output"
 topic_doolhof = "esp_doolhof/output"
@@ -58,7 +58,6 @@ def publish(client, topic, msg):
         print(f"Send `{msg}` to topic `{topic}`")
     else:
         print(f"Failed to send message to topic {topic}")
-
 
 
 def subscribe(client: mqtt_client):
@@ -117,12 +116,13 @@ def verzend():
     print(wie, waar, wanneer)
     return wie, waar, wanneer
 
+
 def controleer_berichten():
     if message_doolhof == WANNEER:
         date = TextBox(app, grid=[1, 2], text=message_doolhof, width="fill", enabled=False)
         print(message_doolhof)
 
-    if message_tetris == 'voltooid':
+    if message_tetris == 'voltooid':  # was true van zodra ik iets verstuurde
         name = TextBox(app, grid=[1, 0], text="Voornaam Naam", width="fill", enabled=True)
         print(message_tetris)
 
@@ -142,6 +142,7 @@ if __name__ == '__main__':
     subscribe(client)
     client.loop_start()
 
-    app.repeat(200, controleer_berichten)
+    date.repeat(1000, controleer_berichten)  # dees zorgt dat de dinges refresht en je er niets in kan schrijven
+    name.repeat(1000, controleer_berichten)
 
     app.display()
