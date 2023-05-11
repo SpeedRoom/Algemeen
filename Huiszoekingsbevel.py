@@ -22,9 +22,6 @@ client_id = "rp"
 username = 'sienp' 
 password = 'sienp'  
 
-message_tetris = ""
-message_doolhof = ""
-
 WIE = "a"
 WAAR = "b"
 WANNEER = "c"
@@ -62,15 +59,13 @@ def publish(client, topic, msg):
 
 def subscribe(client: mqtt_client):
     def on_message(client, userdata, msg):
-        global message_doolhof
-        global message_tetris
         print(f"Received `{msg.payload.decode('utf-8')}` from `{msg.topic}` topic")
         if msg.topic == "esp_doolhof/output":
-            message_doolhof = msg.payload.decode('utf-8').strip()
+            if str(msg.payload.decode('utf-8')) == WANNEER:
+                date = TextBox(app, grid=[1, 2], text=str(msg.payload.decode('utf-8')), width="fill", enabled=False)
         if msg.topic == "esp_tetris/output":
-            message_tetris = msg.payload.decode('utf-8').strip()
-            message_tetris = "voltooid"
-            print(message_tetris)
+            if str(msg.payload.decode('utf-8')) == 'voltooid':
+                name = TextBox(app, grid=[1, 0], text="Voornaam Naam", width="fill", enabled=True)
 
     client.subscribe([(topic_doolhof, 0), (topic_tetris, 0)])
     client.on_message = on_message
@@ -94,7 +89,7 @@ def controleer(wie, waar, wanneer):
 
 
 def print_bevel():  # Hier commando geven aan printer om te printen + mqtt bevel om gsm's aan te steken : "open"
-    os.system("lpr -P printer_name file_name.txt")  #printer name en file_name nog aanpassen, file bij in projectmap zetten
+    os.system("lpr -P printer_name file_name.txt")  # printer name en file_name nog aanpassen, file bij in projectmap zetten
     publish(client, topic_gsm, "open")
     return
 
@@ -117,32 +112,20 @@ def verzend():
     return wie, waar, wanneer
 
 
-def controleer_berichten():
-    if message_doolhof == WANNEER:
-        date = TextBox(app, grid=[1, 2], text=message_doolhof, width="fill", enabled=False)
-        print(message_doolhof)
+app = App(title="Huiszoekingsbevel", height=320, width=480, layout="grid")  # creates schermvakje van de grootte van het TFT shield
+name_label = Text(app, text="Naam van de verdachte: ", grid=[0, 0],  font="Cambria", width=80)
+name = TextBox(app, grid=[1, 0], text="Voornaam Naam", enabled=False, width=400)
+address_label = Text(app, text="Adres van de misdaad: ", grid=[0, 1], font="Cambria", width=220)
+address = TextBox(app, grid=[1, 1], text="Gebroeders Desmetstraat 1, 9000 Gent", width=220)
+date_label = Text(app, text="Datum van de misdaad: ", grid=[0, 2], font="Cambria", width=220)
+date = TextBox(app, grid=[1, 2], text="dd/mm/jjjj", enabled=False, width=220)
+verzend_button = PushButton(app, text="Verzend", command=verzend, grid=[1, 3], width=220)
+picture = Picture(app, image="Justitie.png", align="bottom", grid=[0, 4])
 
-    if message_tetris == 'voltooid':  # was true van zodra ik iets verstuurde
-        name = TextBox(app, grid=[1, 0], text="Voornaam Naam", width="fill", enabled=True)
-        print(message_tetris)
+client = connect_mqtt()
+subscribe(client)
+client.loop_start()
 
+app.display()
 
-if __name__ == '__main__':
-
-    app = App(title="Huiszoekingsbevel", height=320, width=480, layout="grid")  # creates schermvakje van de grootte van het TFT shield
-    name_label = Text(app, text="Naam van de verdachte: ", grid=[0, 0],  font="Cambria")
-    name = TextBox(app, grid=[1, 0], text="Voornaam Naam", width="fill", enabled=False)
-    address_label = Text(app, text="Adres van de misdaad: ", grid=[0, 1], font="Cambria")
-    address = TextBox(app, grid=[1, 1], text="Gebroeders Desmetstraat 1, 9000 Gent", width="fill")
-    date_label = Text(app, text="Datum van de misdaad: ", grid=[0, 2], font="Cambria")
-    date = TextBox(app, grid=[1, 2], text="dd/mm/jjjj", width="fill", enabled=False)
-    verzend_button = PushButton(app, text="Verzend", command=verzend, grid=[1, 3])
-
-    client = connect_mqtt()
-    subscribe(client)
-    client.loop_start()
-
-    date.repeat(1000, controleer_berichten)  # dees zorgt dat de dinges refresht en je er niets in kan schrijven
-    name.repeat(1000, controleer_berichten)
-
-    app.display()
+client.loop_stop()  # stopt pas als gui geclosed wordt
