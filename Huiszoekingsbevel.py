@@ -14,9 +14,9 @@ from paho.mqtt import client as mqtt_client
 import cups
 
 
-conn = cups.Connection()
-printers = conn.getPrinters()
-printer_name = 'speedroom'
+# conn = cups.Connection()
+# printers = conn.getPrinters()
+# printer_name = 'speedroom'
 
 
 # MQTT stuff
@@ -94,8 +94,8 @@ def controleer(wie, waar, wanneer):
 
 
 def print_bevel():  # Hier commando geven aan printer om te printen + mqtt bevel om gsm's aan te steken : "open"
-    #os.system("lpr -P printer_name file_name.txt")  # printer name en file_name nog aanpassen, file bij in projectmap zetten
-    conn.printFile(printer_name,'/home/pi/Desktop/a.pdf',"",{}) 
+    os.system("lpr -P speedroom huiszoekingsbevel.pdf")  # printer name en file_name nog aanpassen, file bij in projectmap zetten
+    #conn.printFile(printer_name,'/home/pi/Desktop/a.pdf',"",{}) 
     publish(client, topic_gsm, "open")
     return
 
@@ -115,15 +115,15 @@ def verzend():
     wanneer = date.value
     controleer(wie, waar, wanneer)
     print(wie, waar, wanneer)
-    #os.system("lpr -P speedroom huiszoekingsbevel.pdf")
-    conn.printFile(printer_name,'huiszoekingsbevel.pdf',"",{}) 
+    os.system("lpr -P speedroom huiszoekingsbevel.pdf")
+    #conn.printFile(printer_name,'huiszoekingsbevel.pdf',"",{}) 
     return wie, waar, wanneer
 
 
 app = App(title="Huiszoekingsbevel", height=320, width=480, layout="grid")  # creates schermvakje van de grootte van het TFT shield
     
 name_label = Text(app, text="Naam van de verdachte: ", grid=[0,0],  font="Cambria")
-name = TextBox(app, grid=[1,0], text="Voornaam Naam", width="fill", enabled=False)
+name = TextBox(app, grid=[1,0], text="Voornaam Naam", width="fill")
 address_label = Text(app, text="Adres van de misdaad: ", grid=[0,1], font="Cambria")
 address = TextBox(app, grid=[1,1], text="Gebroeders Desmetstraat 1, 9000 Gent", width="fill")
 date_label = Text(app, text="Datum van de misdaad: ", grid=[0,2], font="Cambria")
