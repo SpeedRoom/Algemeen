@@ -11,6 +11,13 @@ import time
 import random
 import os
 from paho.mqtt import client as mqtt_client
+import cups
+
+
+conn = cups.Connection()
+printers = conn.getPrinters()
+printer_name = 'speedroom'
+
 
 # MQTT stuff
 broker = '192.168.1.61'  # IP-adres rpi
@@ -63,9 +70,7 @@ def subscribe(client: mqtt_client):
         if msg.topic == "esp_doolhof/output":
             if str(msg.payload.decode('utf-8')) == WANNEER:
                 date = TextBox(app, grid=[1, 2], text=str(msg.payload.decode('utf-8')), width="fill", enabled=False)
-        if msg.topic == "esp_tetris/output":
-            if str(msg.payload.decode('utf-8')) == 'voltooid':
-                name = TextBox(app, grid=[1, 0], text="Voornaam Naam", width="fill", enabled=True)
+                print("date unlocked")
 
     client.subscribe([(topic_doolhof, 0), (topic_tetris, 0)])
     client.on_message = on_message
@@ -73,23 +78,24 @@ def subscribe(client: mqtt_client):
 
 def controleer(wie, waar, wanneer):
     global pogingen
-    if pogingen < MAX:
-        verzend_button.enable()
-    else:
-        app.error(title="Maximum aantal aanvragen overschreden", text=error_message)
-        time.sleep(600)  # 600 seconden (=10min) wachten (vevangen door iets anders, want nu freezed hij gewoon)
-        verzend_button.enable()
     if wie == WIE and waar == WAAR and wanneer == WANNEER:
         print_bevel()
         app.info(title="Huiszoeking goedgekeurd", text=bevel)
         return
-    else:
+    elif pogingen < MAX:
         error()
+        verzend_button.enable()
+    else:
+        app.error(title="Maximum aantal aanvragen overschreden", text=error_message)
+        time.sleep(300)  # 300 seconden (=5min) wachten (vevangen door iets anders, want nu freezed hij gewoon)
+        pogingen = 0
+        verzend_button.enable()
     return
 
 
 def print_bevel():  # Hier commando geven aan printer om te printen + mqtt bevel om gsm's aan te steken : "open"
-    os.system("lpr -P printer_name file_name.txt")  # printer name en file_name nog aanpassen, file bij in projectmap zetten
+    #os.system("lpr -P printer_name file_name.txt")  # printer name en file_name nog aanpassen, file bij in projectmap zetten
+    conn.printFile(printer_name,'/home/pi/Desktop/a.pdf',"",{}) 
     publish(client, topic_gsm, "open")
     return
 
@@ -109,18 +115,22 @@ def verzend():
     wanneer = date.value
     controleer(wie, waar, wanneer)
     print(wie, waar, wanneer)
+    #os.system("lpr -P speedroom huiszoekingsbevel.pdf")
+    conn.printFile(printer_name,'huiszoekingsbevel.pdf',"",{}) 
     return wie, waar, wanneer
 
 
 app = App(title="Huiszoekingsbevel", height=320, width=480, layout="grid")  # creates schermvakje van de grootte van het TFT shield
-name_label = Text(app, text="Naam van de verdachte: ", grid=[0, 0],  font="Cambria", width=80)
-name = TextBox(app, grid=[1, 0], text="Voornaam Naam", enabled=False, width=400)
-address_label = Text(app, text="Adres van de misdaad: ", grid=[0, 1], font="Cambria", width=220)
-address = TextBox(app, grid=[1, 1], text="Gebroeders Desmetstraat 1, 9000 Gent", width=220)
-date_label = Text(app, text="Datum van de misdaad: ", grid=[0, 2], font="Cambria", width=220)
-date = TextBox(app, grid=[1, 2], text="dd/mm/jjjj", enabled=False, width=220)
-verzend_button = PushButton(app, text="Verzend", command=verzend, grid=[1, 3], width=220)
-picture = Picture(app, image="Justitie.png", align="bottom", grid=[0, 4])
+    
+name_label = Text(app, text="Naam van de verdachte: ", grid=[0,0],  font="Cambria")
+name = TextBox(app, grid=[1,0], text="Voornaam Naam", width="fill", enabled=False)
+address_label = Text(app, text="Adres van de misdaad: ", grid=[0,1], font="Cambria")
+address = TextBox(app, grid=[1,1], text="Gebroeders Desmetstraat 1, 9000 Gent", width="fill")
+date_label = Text(app, text="Datum van de misdaad: ", grid=[0,2], font="Cambria")
+date = TextBox(app, grid=[1,2], text="dd/mm/jjjj", width="fill", enabled=False)
+verzend_button = PushButton(app, text="Verzend", command=verzend, grid=[1,3], width="fill")
+picture = Picture(app, image="Justitie.png", align="bottom", grid=[1, 4])  #ook eens proberen zonder grid, eventueel nog met width
+
 
 client = connect_mqtt()
 subscribe(client)
