@@ -11,12 +11,6 @@ import time
 import random
 import os
 from paho.mqtt import client as mqtt_client
-import cups
-
-
-# conn = cups.Connection()
-# printers = conn.getPrinters()
-# printer_name = 'speedroom'
 
 
 # MQTT stuff
@@ -34,6 +28,7 @@ WAAR = "b"
 WANNEER = "c"
 MAX = 5
 
+message_doolhof = ''
 pogingen = 0
 
 weiger_message = "Uw aanvraag voor een huiszoeking is geweigerd. Controleer of alle gegevens juist gespeld zijn."
@@ -65,13 +60,15 @@ def publish(client, topic, msg):
 
 
 def subscribe(client: mqtt_client):
+    
     def on_message(client, userdata, msg):
+        global message_doolhof
         print(f"Received `{msg.payload.decode('utf-8')}` from `{msg.topic}` topic")
         if msg.topic == "esp_doolhof/output":
-            if str(msg.payload.decode('utf-8')) == WANNEER:
-                date = TextBox(app, grid=[1, 2], text=str(msg.payload.decode('utf-8')), width="fill", enabled=False)
-                print("date unlocked")
-
+                message_doolhof = str(msg.payload.decode('utf-8'))
+                date.value = message_doolhof
+            
+    print(date.value)
     client.subscribe([(topic_doolhof, 0), (topic_tetris, 0)])
     client.on_message = on_message
 
@@ -94,8 +91,7 @@ def controleer(wie, waar, wanneer):
 
 
 def print_bevel():  # Hier commando geven aan printer om te printen + mqtt bevel om gsm's aan te steken : "open"
-    os.system("lpr -P speedroom huiszoekingsbevel.pdf")  # printer name en file_name nog aanpassen, file bij in projectmap zetten
-    #conn.printFile(printer_name,'/home/pi/Desktop/a.pdf',"",{}) 
+    os.system("lp -d Canon_TS3300_series_USB_ huiszoekingsbevel.pdf")  # printer name en file_name nog aanpassen, file bij in projectmap zetten
     publish(client, topic_gsm, "open")
     return
 
@@ -115,21 +111,20 @@ def verzend():
     wanneer = date.value
     controleer(wie, waar, wanneer)
     print(wie, waar, wanneer)
-    os.system("lpr -P speedroom huiszoekingsbevel.pdf")
-    #conn.printFile(printer_name,'huiszoekingsbevel.pdf',"",{}) 
     return wie, waar, wanneer
 
 
-app = App(title="Huiszoekingsbevel", height=320, width=480, layout="grid")  # creates schermvakje van de grootte van het TFT shield
+app = App(title="Huiszoekingsbevel", height=480, width=640, layout='grid')  # creates schermvakje van de grootte van het TFT shield
     
-name_label = Text(app, text="Naam van de verdachte: ", grid=[0,0],  font="Cambria")
-name = TextBox(app, grid=[1,0], text="Voornaam Naam", width="fill")
-address_label = Text(app, text="Adres van de misdaad: ", grid=[0,1], font="Cambria")
-address = TextBox(app, grid=[1,1], text="Gebroeders Desmetstraat 1, 9000 Gent", width="fill")
-date_label = Text(app, text="Datum van de misdaad: ", grid=[0,2], font="Cambria")
-date = TextBox(app, grid=[1,2], text="dd/mm/jjjj", width="fill", enabled=False)
-verzend_button = PushButton(app, text="Verzend", command=verzend, grid=[1,3], width="fill")
-picture = Picture(app, image="Justitie.png", align="bottom", grid=[1, 4])  #ook eens proberen zonder grid, eventueel nog met width
+name_label = Text(app, text="Naam van de verdachte: ",grid=[0,0, 1, 1],  font="Cambria", )
+name = TextBox(app, text="Voornaam Naam", grid=[1,0, 2, 1], width=50)
+address_label = Text(app, text="Adres van de misdaad: ",grid=[0,1, 1, 1], font="Cambria")
+address = TextBox(app, text="Gebroeders Desmetstraat 1, 9000 Gent", grid=[1,1, 2, 1], width=50)
+date_label = Text(app, text="Datum van de misdaad: ", grid=[0,2, 1, 1], font="Cambria")
+date = TextBox(app, text="dd/mm/jjjj", grid=[1,2, 2, 1], enabled=False, width=50)
+verzend_button = PushButton(app, text="Verzend", command=verzend,grid=[1,3, 1, 1], width=20)
+picture = Picture(app, image="Justitie.png", grid=[0,6, 3, 1])  # ook eens proberen zonder grid, eventueel nog met width
+print(name.width)
 
 
 client = connect_mqtt()
