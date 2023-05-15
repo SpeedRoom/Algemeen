@@ -11,6 +11,51 @@ import time
 import random
 import os
 from paho.mqtt import client as mqtt_client
+from TexSoup import TexSoup
+from pdflatex import PDFLaTeX
+import subprocess
+
+soup = TexSoup(r'''\documentclass{article}
+\usepackage{graphicx} % Required for inserting images
+\usepackage[indent=0pt]{parskip}
+\usepackage{caption}
+\usepackage{subcaption}
+
+
+\begin{document}
+\begin{figure}
+    \begin{subfigure}[b]{0.7\linewidth}
+        \includegraphics[width=\textwidth]{Justitie.png}
+    \end{subfigure}
+    \begin{subfigure}[b]{0.2\linewidth}
+        \includegraphics[width=\textwidth]{Politie.jpg}
+    \end{subfigure}
+
+\end{figure}
+\par
+
+\textbf{\Large{Betreft: Huiszoekingsbevel}}
+
+De onderzoeksrechter bij de rechtbank van eerste aanleg te Gent,
+Gelet op het strafdossier nr. 2023/2684;\par
+Overwegende dat er ernstige aanwijzingen zijn dat Daan Peeters, geboren te Gent op 27 maart 1995, wonende te Gent, Stadhuissteeg 8, zich schuldig heeft gemaakt aan drugshandel;\par
+Overwegende dat er redenen zijn om te vermoeden dat er in zijn woning bewijsmateriaal, geld of drugs aanwezig zijn die verband houden met de feiten;\par
+Gelet op artikel 87bis van het Wetboek van Strafvordering;\par
+\textbf{BEVEELT}\par
+De officieren en agenten naam1, naam2, naam3 van gerechtelijke politie om zich te begeven naar de woning van Daan Peeters gelegen te Gent, Stadhuissteeg 8, en er een huiszoeking uit te voeren met het oog op het opsporen en in beslag nemen van alle voorwerpen die nuttig kunnen zijn voor de waarheidsvinding;\par
+Dit bevel is geldig voor een periode van vijftien dagen te rekenen vanaf heden en kan slechts worden uitgevoerd tussen vijf uur 's morgens en negen uur 's avonds;\par
+Gegeven te Gent op 16 mei 2023 om 9 uur.\par
+De onderzoeksrechter,\par
+\begin{figure}[h]
+    \includegraphics[width=0.3\textwidth]{handtekening.png}
+\end{figure}
+
+
+
+\end{document}''')
+naam1 = soup.find('naam1')
+naam2 = soup.find('naam2')
+naam3 = soup.find('naam3')
 
 
 # MQTT stuff
@@ -23,9 +68,9 @@ client_id = "rp"
 username = 'sienp' 
 password = 'sienp'  
 
-WIE = "a"
-WAAR = "b"
-WANNEER = "c"
+WIE = "Daan Peeters"
+WAAR = "Stadshal"
+WANNEER = "datum"
 MAX = 5
 
 message_doolhof = ''
@@ -91,7 +136,12 @@ def controleer(wie, waar, wanneer):
 
 
 def print_bevel():  # Hier commando geven aan printer om te printen + mqtt bevel om gsm's aan te steken : "open"
-    os.system("lp -d Canon_TS3300_series_USB_ huiszoekingsbevel.pdf")  # printer name en file_name nog aanpassen, file bij in projectmap zetten
+    with open("out.tex", "w") as f:
+        f.write(str(soup))
+    subprocess.run(["pdflatex", "out.tex"])
+    output_location = "/home/sienp/Documents"
+    subprocess.run(["mv", "output.pdf", output_location])
+    os.system("lp -d Canon_TS3300_series_USB_ output.pdf")  # printer name en file_name nog aanpassen, file bij in projectmap zetten
     publish(client, topic_gsm, "open")
     return
 
@@ -104,7 +154,7 @@ def error():
 def verzend():
     global pogingen
     print("Aanvraag huiszoeking is verstuurd.")
-    verzend_button.disable()
+    #verzend_button.disable()
     pogingen += 1
     wie = name.value
     waar = address.value
@@ -112,6 +162,13 @@ def verzend():
     controleer(wie, waar, wanneer)
     print(wie, waar, wanneer)
     return wie, waar, wanneer
+
+
+def login():
+    window.hide()
+    soup.naam1.replace_with(name1.value)
+    soup.naam2.replace_with(name2.value)
+    soup.naam3.replace_with(name3.value)
 
 
 app = App(title="Huiszoekingsbevel", height=480, width=640, layout='grid', bg="white")  # creates schermvakje van de grootte van het TFT shield
@@ -123,11 +180,21 @@ address = TextBox(app, text="Gebroeders Desmetstraat 1, 9000 Gent", grid=[1,1, 2
 date_label = Text(app, text="Datum van de misdaad: ", grid=[0,2, 1, 1], font="Cambria")
 date = TextBox(app, text="dd/mm/jjjj", grid=[1,2, 2, 1], enabled=False, width=50)
 verzend_button = PushButton(app, text="Verzend", command=verzend,grid=[1,3, 1, 1], width=20)
-empty_label = Text(app, text="", grid=[0,4, 1, 1])
-empty_label = Text(app, text="", grid=[0,5, 1, 1])
+empty_label = Text(app, text="", grid=[0, 4, 1, 1])
+empty_label2 = Text(app, text="", grid=[0, 5, 1, 1])
+empty_label3 = Text(app, text="", grid=[0, 4, 1, 1])
+empty_label4 = Text(app, text="", grid=[0, 5, 1, 1])
 picture = Picture(app, image="Justitie.png", grid=[0,6, 3, 1])  # ook eens proberen zonder grid, eventueel nog met width
-print(name.width)
 
+window = Window(app, title="Log in", height=480, width=640, layout='grid', bg="white")
+name1_label = Text(window, text="Naam : ",grid=[0,0, 1, 1],  font="Cambria", )
+name1 = TextBox(window, text="Voornaam Naam", grid=[1,0, 2, 1], width=50)
+name2_label = Text(window, text="Naam : ",grid=[0,1, 1, 1],  font="Cambria", )
+name2 = TextBox(window, text="Voornaam Naam", grid=[1,1, 2, 1], width=50)
+name3_label = Text(window, text="Naam : ",grid=[0,2, 1, 1],  font="Cambria", )
+name3 = TextBox(window, text="Voornaam Naam", grid=[1,2, 2, 1], width=50)
+login_button = PushButton(window, text="Log in", command=login, grid=[1, 3, 1, 1], width=20)
+window.show(wait=True)
 
 client = connect_mqtt()
 subscribe(client)
