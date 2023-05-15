@@ -31,9 +31,9 @@ MAX = 5
 message_doolhof = ''
 pogingen = 0
 
-weiger_message = "Uw aanvraag voor een huiszoeking is geweigerd. Controleer of alle gegevens juist gespeld zijn."
+weiger_message = "Uw aanvraag voor een huiszoeking is geweigerd. Controleer of alle gegevens juist gespeld zijn. U heeft nog " + str(MAX - pogingen) + " pogingen over."
 bevel = "Om aanvraag voor een huiszoeking is goedgekeurd. Uw huiszoekingsbevel wordt geprint."
-error_message = "Het maximum aantal aanvragen voor huiszoeking is overschreden, probeer over 10 minuten nog eens."
+error_message = "Het maximum aantal aanvragen voor huiszoeking is overschreden, probeer over 5 minuten nog eens."
 
 
 def connect_mqtt() -> mqtt_client:
