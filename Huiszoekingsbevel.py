@@ -114,7 +114,7 @@ def verzend():
     return wie, waar, wanneer
 
 
-app = App(title="Huiszoekingsbevel", height=480, width=640, layout='grid')  # creates schermvakje van de grootte van het TFT shield
+app = App(title="Huiszoekingsbevel", height=480, width=640, layout='grid', bg="white")  # creates schermvakje van de grootte van het TFT shield
     
 name_label = Text(app, text="Naam van de verdachte: ",grid=[0,0, 1, 1],  font="Cambria", )
 name = TextBox(app, text="Voornaam Naam", grid=[1,0, 2, 1], width=50)
@@ -123,6 +123,8 @@ address = TextBox(app, text="Gebroeders Desmetstraat 1, 9000 Gent", grid=[1,1, 2
 date_label = Text(app, text="Datum van de misdaad: ", grid=[0,2, 1, 1], font="Cambria")
 date = TextBox(app, text="dd/mm/jjjj", grid=[1,2, 2, 1], enabled=False, width=50)
 verzend_button = PushButton(app, text="Verzend", command=verzend,grid=[1,3, 1, 1], width=20)
+empty_label = Text(app, text="", grid=[0,4, 1, 1])
+empty_label = Text(app, text="", grid=[0,5, 1, 1])
 picture = Picture(app, image="Justitie.png", grid=[0,6, 3, 1])  # ook eens proberen zonder grid, eventueel nog met width
 print(name.width)
 
