@@ -14,8 +14,10 @@ from paho.mqtt import client as mqtt_client
 from TexSoup import TexSoup
 from pdflatex import PDFLaTeX
 import subprocess
+import re
 
-soup = TexSoup(r'''\documentclass{article}
+global soup
+soup = r'''\documentclass{article}
 \usepackage{graphicx} % Required for inserting images
 \usepackage[indent=0pt]{parskip}
 \usepackage{caption}
@@ -52,10 +54,11 @@ De onderzoeksrechter,\par
 
 
 
-\end{document}''')
-naam1 = soup.find('naam1')
-naam2 = soup.find('naam2')
-naam3 = soup.find('naam3')
+\end{document}'''
+
+replaceString1 = 'naam1'
+replaceString2 = 'naam2'
+replaceString3 = 'naam3'
 
 
 # MQTT stuff
@@ -70,7 +73,7 @@ password = 'sienp'
 
 WIE = "Daan Peeters"
 WAAR = "Stadshal"
-WANNEER = "datum"
+WANNEER = "c"
 MAX = 5
 
 message_doolhof = ''
@@ -110,7 +113,7 @@ def subscribe(client: mqtt_client):
         global message_doolhof
         print(f"Received `{msg.payload.decode('utf-8')}` from `{msg.topic}` topic")
         if msg.topic == "esp_doolhof/output":
-                message_doolhof = str(msg.payload.decode('utf-8'))
+                message_doolhof = "27/05/1995"
                 date.value = message_doolhof
             
     print(date.value)
@@ -120,7 +123,7 @@ def subscribe(client: mqtt_client):
 
 def controleer(wie, waar, wanneer):
     global pogingen
-    if wie == WIE and waar == WAAR and wanneer == WANNEER:
+    if wie == WIE and waar == WAAR:
         print_bevel()
         app.info(title="Huiszoeking goedgekeurd", text=bevel)
         return
@@ -140,8 +143,8 @@ def print_bevel():  # Hier commando geven aan printer om te printen + mqtt bevel
         f.write(str(soup))
     subprocess.run(["pdflatex", "out.tex"])
     output_location = "/home/sienp/Documents"
-    subprocess.run(["mv", "output.pdf", output_location])
-    os.system("lp -d Canon_TS3300_series_USB_ output.pdf")  # printer name en file_name nog aanpassen, file bij in projectmap zetten
+    subprocess.run(["mv", "out.pdf", output_location])
+    os.system("lp -d Canon_TS3300_series_USB_ /home/sienp/Documents/out.pdf")  # printer name en file_name nog aanpassen, file bij in projectmap zetten
     publish(client, topic_gsm, "open")
     return
 
@@ -165,13 +168,14 @@ def verzend():
 
 
 def login():
+    global soup
     window.hide()
-    soup.naam1.replace_with(name1.value)
-    soup.naam2.replace_with(name2.value)
-    soup.naam3.replace_with(name3.value)
+    soup = re.sub(replaceString1, name1.value, soup)
+    soup = re.sub(replaceString2, name2.value, soup)
+    soup = re.sub(replaceString3, name3.value, soup)
 
 
-app = App(title="Huiszoekingsbevel", height=480, width=640, layout='grid', bg="white")  # creates schermvakje van de grootte van het TFT shield
+app = App(title="Huiszoekingsbevel", height=1050, width=1680, layout='grid', bg="white")  # creates schermvakje van de grootte van het TFT shield
     
 name_label = Text(app, text="Naam van de verdachte: ",grid=[0,0, 1, 1],  font="Cambria", )
 name = TextBox(app, text="Voornaam Naam", grid=[1,0, 2, 1], width=50)
@@ -186,12 +190,12 @@ empty_label3 = Text(app, text="", grid=[0, 4, 1, 1])
 empty_label4 = Text(app, text="", grid=[0, 5, 1, 1])
 picture = Picture(app, image="Justitie.png", grid=[0,6, 3, 1])  # ook eens proberen zonder grid, eventueel nog met width
 
-window = Window(app, title="Log in", height=480, width=640, layout='grid', bg="white")
-name1_label = Text(window, text="Naam : ",grid=[0,0, 1, 1],  font="Cambria", )
+window = Window(app, title="Log in", height=1050, width=1680, layout='grid', bg="white")
+name1_label = Text(window, text="Speler 1 : ",grid=[0,0, 1, 1],  font="Cambria", )
 name1 = TextBox(window, text="Voornaam Naam", grid=[1,0, 2, 1], width=50)
-name2_label = Text(window, text="Naam : ",grid=[0,1, 1, 1],  font="Cambria", )
+name2_label = Text(window, text="Speler 2 : ",grid=[0,1, 1, 1],  font="Cambria", )
 name2 = TextBox(window, text="Voornaam Naam", grid=[1,1, 2, 1], width=50)
-name3_label = Text(window, text="Naam : ",grid=[0,2, 1, 1],  font="Cambria", )
+name3_label = Text(window, text="Speler 3 : ",grid=[0,2, 1, 1],  font="Cambria", )
 name3 = TextBox(window, text="Voornaam Naam", grid=[1,2, 2, 1], width=50)
 login_button = PushButton(window, text="Log in", command=login, grid=[1, 3, 1, 1], width=20)
 window.show(wait=True)
